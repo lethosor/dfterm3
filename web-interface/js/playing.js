@@ -13,6 +13,7 @@ dfterm3_playing = function() {
     var CHAT_MESSAGE = 3;
     var LOGIN_REJECTED = 3;
     var LOGIN_ACCEPTED = 4;
+    var GAME_IS_GONE = 5;
 
     var logged_in = false;
 
@@ -69,6 +70,13 @@ dfterm3_playing = function() {
 
         terminal_dom_element.setAttribute( "class"
                                          , "dfterm3" );
+
+        var game_is_gone_box = document.createElement("h3");
+        game_is_gone_box.setAttribute("id", "game_is_gone_box");
+        game_is_gone_box.textContent = "Game is not active";
+        game_is_gone_box.style.display = "none";
+
+
 
         var who_is_playing_box = document.createElement("h3");
         var resetWhoIsPlaying = function() {
@@ -172,6 +180,7 @@ dfterm3_playing = function() {
             }
             terminal_dom_element.removeChild( terminal.getDOMObject() );
             terminal_dom_element.removeChild( who_is_playing_box );
+            terminal_dom_element.removeChild( game_is_gone_box );
             terminal_dom_element.removeChild( title );
             terminal_dom_element.removeChild( br_element );
             terminal_dom_element.removeChild( second_br_element );
@@ -190,6 +199,7 @@ dfterm3_playing = function() {
             terminal = dfterm3_terminal.createTerminal( w, h );
 
             terminal_dom_element.appendChild( title );
+            terminal_dom_element.appendChild( game_is_gone_box );
             terminal_dom_element.appendChild( who_is_playing_box );
             terminal_dom_element.appendChild( br_element );
             terminal_dom_element.appendChild( terminal.getDOMObject() );
@@ -197,28 +207,33 @@ dfterm3_playing = function() {
             terminal_dom_element.appendChild( go_back_button );
             terminal_dom_element.appendChild( chat_box );
 
+            who_is_playing_box.style.display = "inline";
+            game_is_gone_box.style.display = "none";
+
             terminal.getDOMObject().setAttribute("tabindex", 1);
 
-            var key = function(event) {
-                socket.send("\x05" + JSON.stringify(
-                            { which: event.which
-                            , code_point: 0
-                            , shift: event.shiftKey
-                            , alt:  event.altKey
-                            , ctrl: event.ctrlKey }));
+            var key = function(prefix) {
+                return function(event) {
+                    socket.send(prefix + JSON.stringify(
+                                { which: event.which
+                                , code_point: 0
+                                , shift: event.shiftKey
+                                , alt:  event.altKey
+                                , ctrl: event.ctrlKey }));
 
-                if ( event.which == 39 ||
-                     event.which == 37 ||
-                     event.which == 38 ||
-                     event.which == 40 ||
-                     event.which == 9 ||
-                     event.which == 32 ) {
-                     event.preventDefault();
+                    if ( event.which == 39 ||
+                         event.which == 37 ||
+                         event.which == 38 ||
+                         event.which == 40 ||
+                         event.which == 9 ||
+                         event.which == 32 ) {
+                         event.preventDefault();
+                    }
                 }
             }
 
             var keypress = function(event) {
-                socket.send("\x05" + JSON.stringify(
+                socket.send("\x07" + JSON.stringify(
                             { which: 0
                             , code_point: event.charCode
                             , shift: event.shiftKey
@@ -227,7 +242,11 @@ dfterm3_playing = function() {
             }
 
             terminal.getDOMObject().addEventListener("keypress", keypress, true);
-            terminal.getDOMObject().addEventListener("keydown", key, true);
+            terminal.getDOMObject().addEventListener( "keydown"
+                                                    , key("\x05"), true);
+            terminal.getDOMObject().addEventListener("keyup"
+                                                    , key("\x06")
+                                                    , true);
         }
 
         title.setAttribute("class", "dfterm3_terminal_title_bar");
@@ -280,22 +299,35 @@ dfterm3_playing = function() {
         var startGameList = function(msg) {
             stopGameList();
 
+            var loading_in_progress = false;
+
             game_list_ul = document.createElement("ul");
             for ( var i = 0; i < msg.length; ++i ) {
-	        var x = function() {
-		    var li = document.createElement("li");
-		    var a = document.createElement("a");
-		    a.setAttribute("href", "#");
-		    a.textContent = msg[i][0];
-		    var choice = msg[i][1];
-		    var content = msg[i][0];
-		    a.onclick = function () {
-			socket.send("\x01" + choice);
-			title.textContent = content;
-		    }
-		    li.appendChild(a);
-		    game_list_ul.appendChild(li);
-		}();
+                var x = function() {
+                    var li = document.createElement("li");
+                    var a = document.createElement("a");
+                    var loading_indicator = document.createElement("span");
+                    loading_indicator.setAttribute( "class"
+                                                  , "loading_indicator" );
+                    loading_indicator.style.display = "none";
+                    loading_indicator.textContent = "starting up...";
+
+                    a.setAttribute("href", "#");
+                    a.textContent = msg[i][0];
+                    var choice = msg[i][1];
+                    var content = msg[i][0];
+                    a.onclick = function () {
+                        if ( loading_in_progress === false ) {
+                            loading_in_progress = true;
+                            socket.send("\x01" + choice);
+                            title.textContent = content;
+                            loading_indicator.style.display = "inline";
+                        }
+                    }
+                    li.appendChild(a);
+                    li.appendChild(loading_indicator);
+                    game_list_ul.appendChild(li);
+                }();
             }
 
             game_list_h1 = document.createElement("h1");
@@ -370,6 +402,9 @@ dfterm3_playing = function() {
                     status( "Logged in", false );
                     chat_text.style.display = "block";
                     login_form.style.display = "none";
+                } else if ( array_view[0] == GAME_IS_GONE ) {
+                    game_is_gone_box.style.display = "inline";
+                    who_is_playing_box.style.display = "none";
                 }
             }
         }

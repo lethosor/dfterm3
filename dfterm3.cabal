@@ -2,21 +2,29 @@
 -- documentation, see http://haskell.org/cabal/users-guide/
 
 name:                dfterm3
-version:             0.2
+version:             0.3
 synopsis:            Dwarf Fortress remote playing software
--- description:         
+
+description:         This software lets you play Dwarf Fortress through a
+                     web interface. It supports multiple users playing the same
+                     game by sharing input to the game (or fighting over it).
+
 license:             ISC
 license-file:        LICENSE
 author:              Mikko Juola
 maintainer:          mikjuo@gmail.com
--- copyright:           
+copyright:           Copyright (c) 2013 Mikko Juola
 category:            Network
 build-type:          Simple
 cabal-version:       >=1.8
 
+source-repository head
+  type:              git
+  location:          https://github.com/Noeda/dfterm3.git
+
 library
   hs-source-dirs:      src
-  ghc-options:         -Wall -threaded -fno-warn-name-shadowing
+  ghc-options:         -Wall -fno-warn-name-shadowing
   exposed-modules:     MockMain
                        ConfiguredDefaults
                        Dfterm3.AdminPanel
@@ -24,6 +32,7 @@ library
                        Dfterm3.CP437Game
                        Dfterm3.Dfterm3Monad
                        Dfterm3.DwarfFortress
+                       Dfterm3.DwarfFortress.Process
                        Dfterm3.DwarfFortress.Types
                        Dfterm3.GamePool
                        Dfterm3.Logging
@@ -68,17 +77,15 @@ library
                       ,blaze-html ==0.6.*
                       ,blaze-markup ==0.5.*
                       ,filepath ==1.3.*
+                      ,process ==1.1.*
 
   if os(mingw32)
-      build-depends:  process ==1.1.*
-                     ,Win32 ==2.2.*
-      exposed-modules: Dfterm3.DwarfFortress.Windows
+      build-depends:  Win32 ==2.2.*
       cpp-options:    "-DWINDOWS"
   else
       build-depends:  unix ==2.6.*
                      ,daemons ==0.1.*
                      ,HsOpenSSL ==0.10.*
-      exposed-modules: Dfterm3.DwarfFortress.Unix
 
 executable dfterm3
   hs-source-dirs:      main

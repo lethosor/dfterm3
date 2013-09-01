@@ -9,6 +9,7 @@ import Dfterm3.Logging
 import Dfterm3.GamePool
 import Dfterm3.DwarfFortress
 import Dfterm3.WebsocketHTTP
+import Data.Maybe ( catMaybes )
 import qualified Dfterm3.UserVolatile as UV
 import qualified Dfterm3.User as U
 
@@ -47,6 +48,7 @@ data StartupOption = Websocket !Word16
                    | SetAdminPassword
                    | WebsocketHTTP !Word16
                    | UseSyslog
+                   | DontUseDefaultPorts
                    deriving ( Eq, Ord, Show, Read, Typeable )
 
 options :: [OptDescr StartupOption]
@@ -59,6 +61,9 @@ options = [ Option "w" ["websocket"]
           , Option "h?" ["help"]
             (NoArg ShowHelp)
             "show valid command line options and exit."
+          , Option "p" ["no-default-ports"]
+            (NoArg DontUseDefaultPorts)
+            "do not implicitly open services at some ports (see below)."
 #ifndef WINDOWS
           , Option "d" ["daemon", "daemonize"]
             (OptArg Daemonize "PIDFILE")
@@ -90,13 +95,17 @@ isAdminPanelOption :: StartupOption -> Bool
 isAdminPanelOption (AdminPanel _) = True
 isAdminPanelOption _ = False
 
+isWebsocketPortOption :: StartupOption -> Maybe Word16
+isWebsocketPortOption (Websocket port) = Just port
+isWebsocketPortOption _ = Nothing
+
 dfterm3 :: [String] -> IO ()
 dfterm3 args = withOpenSSL $ do
 #ifndef WINDOWS
     void $ setFileCreationMask 0o077
 #endif
     case getOpt Permute options args of
-        (options, [], []) -> run options
+        (options, [], []) -> run (maybeAddDefaultOptions options)
         (_, e:_, []) -> do
             hPutStrLn stderr $
                 "Unknown command line option " ++ show e
@@ -107,6 +116,12 @@ dfterm3 args = withOpenSSL $ do
             hPutStrLn stderr
                 "Use -h, -? or --help to see valid commane line options."
             exitFailure
+
+maybeAddDefaultOptions :: [StartupOption] -> [StartupOption]
+maybeAddDefaultOptions options
+    | DontUseDefaultPorts `notElem` options =
+          options ++ [Websocket 8000, AdminPanel 8081, WebsocketHTTP 8080]
+    | otherwise = options
 
 run :: [StartupOption] -> IO ()
 run options
@@ -190,8 +205,14 @@ run options
       where
         applyOption system uv (Websocket port) =
             void $ WS.listen pool system uv port
-        applyOption _ _ (WebsocketHTTP port) =
-            void $ forkIO $ startWebsocketHTTP port
+        applyOption _ _ (WebsocketHTTP port) = do
+            _ <- forkIO $ startWebsocketHTTP port websocket_ports
+            when (null websocket_ports) $
+               logWarning $ "WebSocket HTTP server started but there are "
+                            ++ "no WebSocket servers specified."
+          where
+            websocket_ports = catMaybes $ fmap isWebsocketPortOption options
+
         applyOption _ _ _ = return ()
 
 showHelp :: IO ()
@@ -218,8 +239,11 @@ showHelp = do
     putStrLn $ "The administrator interface is served by listening on the "
                ++ "local network device 127.0.0.1. This has the implication that "
                ++ "it cannot be directly accessed from outside the local "
-               ++ "computer.\n"
-
+               ++ "computer.\n\n"
+    putStrLn $ "Normally, a port is opened for WebSockets at port 8000, "
+               ++ "WebSockets HTTP at port 8080 and administrator panel at "
+               ++ "port 8081. If you pass --no-default-ports, then none of "
+               ++ "these ports are opened unless you explicitly set them."
 
 setAdminPassword :: U.UserSystem -> IO ()
 setAdminPassword us = do
