@@ -21,7 +21,7 @@ body {
     width: 100%;
     height: 100%;
     background-color: rgba(128, 128, 128, 0.5);
-    z-index: 1000;
+    z-index: 1050;
 }
 
 .modal-window {
@@ -31,7 +31,7 @@ body {
     left: 20%;
     width: 60%;
     height: 60%;
-    z-index: 1001;
+    z-index: 1051;
     padding: 1em;
     border-radius: 5px;
 }
@@ -97,7 +97,7 @@ body {
     top: 50%;
     margin-top: -75px;
     margin-left: -250px;
-    box-shadow: 5px 5px;
+    box-shadow: 5px 5px 5px;
 }
 
 .admin_flash_failure {
@@ -105,24 +105,16 @@ body {
 }
 
 .admin_flash_success {
-    color: #0c0;
+    color: #0b0;
 }
 
 .button {
     border: 0px solid black;
-    border-radius: 2;
+    border-radius: 2px;
     width: 0.75em;
     height: 0.75em;
     text-decoration: none;
     padding: 0 2px;
-}
-
-.button.close {
-    color: red;
-}
-
-.button.close:hover {
-    background-color: #ddcccc;
 }
 
 #admin_submit_button {
@@ -136,7 +128,8 @@ body {
     background: #ddd;
     border: 1px solid;
     padding: 20px;
-    box-shadow: 5px 5px;
+    box-shadow: 5px 5px 5px;
+    margin: 5em 0.5em auto;
 }
 
 .admin_title_unregistered {
@@ -162,14 +155,32 @@ body {
     margin-left: 50px;
 }
 
-.admin_content li {
-    list-style: none;
-    font-family: monospace;
-    display: inline-block;
-    padding: 10px;
-    background: #d0d0d0;
-    height: 25px;
+table.game_list {
+    margin: 10px 4px;
     box-shadow: 1px 1px;
+    border-collapse: collapse;
+}
+
+table.game_list tr {
+    list-style: none;
+    height: 25px;
+}
+
+table.game_list td, table.game_list th {
+    border: 1px solid #999;
+    padding: 5px;
+}
+
+table.game_list td {
+    background-color: #ddd;
+}
+
+table.game_list td.game_exepath {
+    font-family: monospace;
+}
+
+table.game_list th {
+    background-color: #eee;
 }
 
 .admin_password_form {
